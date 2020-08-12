@@ -11,7 +11,7 @@ import traceback
 import Xlib.rdb, Xlib.X, Xlib.XK
 import beringwm
 
-VERSION = (0, 1)
+VERSION = (0, 2)
 REQUIRED_XLIB_VERSION = (0, 14)
 
 def main():
@@ -22,7 +22,7 @@ def main():
     try:
         display, appname, resource_database, args = Xlib.rdb.get_display_opts(Xlib.rdb.stdopts)
     except Xlib.error.DisplayConnectionError:
-        sys.stderr.write("Can't connect to display " + os.environ['DISPLAY'])
+        sys.stderr.write("Can't connect to display " + os.environ['DISPLAY'] + "\n")
         return 2
     
     try:
@@ -34,7 +34,7 @@ def main():
     try:
         wm.main_loop()
     except Xlib.error.ConnectionClosedError:
-        sys.stderr.write('Display connection closed by server')
+        sys.stderr.write('Display connection closed by server\n')
         return 3
     except KeyboardInterrupt:
         print('Exited normally')

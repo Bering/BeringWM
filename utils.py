@@ -2,10 +2,10 @@ import os
 import sys
 import traceback
 
+'''
+Forks a command and disowns it.
+'''
 def system(command):
-    '''
-    Forks a command and disowns it.
-    '''
 
     if os.fork() != 0:
         return

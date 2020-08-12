@@ -22,7 +22,7 @@ class BeringWM:
 
         self.screens = []
         for screen_id in range(0, display.screen_count()):
-            if self.redirect_screen_events(screen_id):
+            if self.hook_to_screen(screen_id):
                 self.screens.append(screen_id)
 
         if len(self.screens) == 0:
@@ -41,10 +41,10 @@ class BeringWM:
             Xlib.X.KeyRelease: self.handle_key_release,
         }
 
-    def redirect_screen_events(self, screen_id):
-        '''
-        Attempts to redirect the screen events, and returns True on success.
-        '''
+    '''
+    Setup substructure redirection and grab keys. Returns True on success.
+    '''
+    def hook_to_screen(self, screen_id):
 
         # Setup substructure redirection on the root window
         root_window = self.display.screen(screen_id).root
@@ -69,18 +69,29 @@ class BeringWM:
 
         # Find all existing windows.
         for window in root_window.query_tree().children:
-            print('Grabbing mouse motion events for window {0}'.format(window))
-            self.grab_window_events(window)
+            self.capture_window(window)
 
         return True
 
     def x_error_handler(self, err, request):
         sys.stderr.write('X protocol error: {0}'.format(err))
 
-    def grab_window_events(self, window):
-        '''
-        Grab right-click and right-drag events on the window.
-        '''
+    '''
+    Grab right-click and right-drag events on the window.
+    '''
+    def capture_window(self, window):
+
+        print('Capturing window {0} {1} {2}... '.format(window.id, window.get_wm_class(), window.get_wm_name()), end="")
+
+        a = window.get_attributes()
+
+        if a.override_redirect:
+            print("(override_redirect) ", end="")
+
+        if a.map_state != Xlib.X.IsViewable:
+            print("Not viewable")
+            return
+
         window.grab_button(3, 0, True,
             Xlib.X.ButtonMotionMask | Xlib.X.ButtonReleaseMask | Xlib.X.ButtonPressMask,
             Xlib.X.GrabModeAsync,
@@ -88,11 +99,13 @@ class BeringWM:
             Xlib.X.NONE,
             Xlib.X.NONE,
             None)
+        
+        print("Captured")
 
+    '''
+    Loop until Ctrl+C or exceptions have occurred more than MAX_EXCEPTION times.
+    '''
     def main_loop(self):
-        '''
-        Loop until Ctrl+C or exceptions have occurred more than MAX_EXCEPTION times.
-        '''
         errors = 0
         while True:
             try:
@@ -129,16 +142,16 @@ class BeringWM:
 
     def handle_map_request(self, event):
         event.window.map()
-        self.grab_window_events(event.window)
+        self.capture_window(event.window)
 
     # TODO: Why?
     def handle_mapping_notify(self, event):
         self.display.refresh_keyboard_mapping(event)
 
+    '''
+    Right click & drag to move window.
+    '''
     def handle_mouse_motion(self, event):
-        '''
-        Right click & drag to move window.
-        '''
         if event.state & Xlib.X.Button3MotionMask:
             if self.drag_window is None:
                 # Start right-drag
