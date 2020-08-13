@@ -33,6 +33,7 @@ def main():
 
     try:
         wm.main_loop()
+        return 0
     except Xlib.error.ConnectionClosedError:
         sys.stderr.write('Display connection closed by server\n')
         return 3
@@ -44,6 +45,9 @@ def main():
     except:
         traceback.print_exc()
         return 1
+    finally:
+        if wm.display is not None:
+            wm.release_all_windows()
 
 if __name__ == '__main__':
     
