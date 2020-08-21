@@ -230,7 +230,6 @@ class BeringWM:
         try:
             event = self.display.next_event()
             if event.type in self.event_dispatch_table:
-                print("Handling event: ", event)
                 handler = self.event_dispatch_table[event.type]
                 handler(event)
             else:
