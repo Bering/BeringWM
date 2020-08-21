@@ -179,13 +179,12 @@ class BeringWM:
 
         print('Releasing window {0}/{1}... '.format(window.owner, window.id), end="")
 
-        frame.unmap()
-
         g = frame.get_geometry()
         window.reparent(screen.root, g.x, g.y)
 
         # TODO: Remove from saveset?
 
+        frame.unmap()
         frame.destroy()
 
         del self.windows[frame.id]
@@ -209,25 +208,45 @@ class BeringWM:
 
     def main_loop(self):
         '''
-        Loop until Ctrl+C or exceptions have occurred more than MAX_EXCEPTION times.
+        Loop until Alt+Q or Ctrl+C or exceptions have occurred more than MAX_EXCEPTION times.
         '''
         errors = 0
-        while self.ShouldQuit == False:
-            try:
-                event = self.display.next_event()
-                if event.type in self.event_dispatch_table:
-                    handler = self.event_dispatch_table[event.type]
-                    handler(event)
-                else:
-                    print('unhandled event: {event}'.format(event=event))
-            except (KeyboardInterrupt, SystemExit):
-                raise
-            except:
-                errors += 1
-                if errors > MAX_EXCEPTIONS:
-                    raise
-                traceback.print_exc()
+        ShouldReallyQuit = False
+        while ShouldReallyQuit == False:
 
+            if self.ShouldQuit == True:
+                self.release_all_windows()
+                while self.display.pending_events():
+                    self.handle_event()
+                ShouldReallyQuit = True
+            
+            else:
+                self.handle_event()
+
+    """
+    Handle the next event in the queue. Blocks if there are no events in the queue.
+    """
+    def handle_event(self):
+        try:
+            event = self.display.next_event()
+            if event.type in self.event_dispatch_table:
+                print("Handling event: ", event)
+                handler = self.event_dispatch_table[event.type]
+                handler(event)
+            else:
+                print('unhandled event: {event}'.format(event=event))
+        except (KeyboardInterrupt):
+            self.ShouldQuit = True
+        except (SystemExit):
+            self.release_all_windows()
+            raise
+        except:
+            errors += 1
+            if errors > MAX_EXCEPTIONS:
+                self.release_all_windows()
+                raise
+            traceback.print_exc()
+        
     def handle_create_notify(self, event):
         pass
 

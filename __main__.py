@@ -45,9 +45,6 @@ def main():
     except:
         traceback.print_exc()
         return 1
-    finally:
-        if wm.display is not None:
-            wm.release_all_windows()
 
 if __name__ == '__main__':
     
