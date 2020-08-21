@@ -17,6 +17,7 @@ Started with [SimpleWM from J. D. Bartlett](https://sqizit.bartletts.id.au/2011/
 Check out the [Projects Tab on GitHub](https://github.com/Bering/BeringWM/projects/1)
 
 * Reparenting, with 2px borders
+* Track active window (red border)
 * Tiling (Tall layout)
 * My favorite keybindings
 * 1px space between windows
