@@ -48,6 +48,7 @@ class BeringWM:
             Xlib.X.MappingNotify: self.handle_mapping_notify,
             Xlib.X.UnmapNotify: self.handle_unmap_notify,
             Xlib.X.ReparentNotify: self.handle_reparent_notify,
+            Xlib.X.ClientMessage: self.handle_client_message,
 
             Xlib.X.MotionNotify: self.handle_mouse_motion,
             Xlib.X.ButtonPress: self.handle_mouse_press,
@@ -297,6 +298,9 @@ class BeringWM:
         self.release_window(screen, frame)
 
     def handle_reparent_notify(self, event):
+        pass
+
+    def handle_client_message(self, event):
         pass
 
     def handle_mouse_motion(self, event):
