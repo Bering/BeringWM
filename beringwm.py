@@ -211,7 +211,7 @@ class BeringWM:
         '''
         Loop until Alt+Q or Ctrl+C or exceptions have occurred more than MAX_EXCEPTION times.
         '''
-        errors = 0
+        self.Errors = 0
         ShouldReallyQuit = False
         while ShouldReallyQuit == False:
 
@@ -241,8 +241,8 @@ class BeringWM:
             self.release_all_windows()
             raise
         except:
-            errors += 1
-            if errors > MAX_EXCEPTIONS:
+            self.Errors += 1
+            if self.Errors > MAX_EXCEPTIONS:
                 self.release_all_windows()
                 raise
             traceback.print_exc()
