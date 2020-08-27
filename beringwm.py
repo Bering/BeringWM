@@ -39,15 +39,9 @@ class BeringWM:
         self.display.set_error_handler(self.x_error_handler)
 
         self.event_dispatch_table = {
-            Xlib.X.CreateNotify: self.handle_create_notify,
-            Xlib.X.DestroyNotify: self.handle_destroy_notify,
-            Xlib.X.ConfigureRequest: self.handle_configure_request,
-            Xlib.X.ConfigureNotify: self.handle_configure_notify,
             Xlib.X.MapRequest: self.handle_map_request,
-            Xlib.X.MapNotify: self.handle_map_notify,
             Xlib.X.MappingNotify: self.handle_mapping_notify,
-            Xlib.X.UnmapNotify: self.handle_unmap_notify,
-            Xlib.X.ReparentNotify: self.handle_reparent_notify,
+            Xlib.X.ConfigureRequest: self.handle_configure_request,
             Xlib.X.ClientMessage: self.handle_client_message,
 
             Xlib.X.MotionNotify: self.handle_mouse_motion,
@@ -119,7 +113,7 @@ class BeringWM:
         Draw a frame around a window and subscribe to substructure redirection
         """
 
-        print('Capturing window {0}/{1} {2} {3}... '.format(window.owner, window.id, window.get_wm_class(), window.get_wm_name()), end="")
+        print('  Capturing window {0}/{1} {2} {3}... '.format(window.owner, window.id, window.get_wm_class(), window.get_wm_name()), end="")
 
         a = window.get_attributes()
 
@@ -130,24 +124,11 @@ class BeringWM:
             print("Not viewable")
             return
 
-        g = window.get_geometry()
+        white = a.colormap.alloc_named_color("#ffffff").pixel
+        window.configure(border_width=2)
+        window.change_attributes(None, border_pixel=white)
 
-        frame = screen.root.create_window(
-            x=g.x,y=g.y, width=g.width, height=g.height, depth=screen.root_depth, border_width=2,
-            border_pixel=screen.white_pixel, event_mask=Xlib.X.SubstructureRedirectMask | Xlib.X.SubstructureNotifyMask
-        )
-
-        self.windows[frame.id] = window
-
-        # TODO: add_to_save_set(window)?
-
-        window.reparent(frame, 0, 0)
-
-        # TODO: frame.set_wm_class, set_wm_name, etc?
-
-        frame.map()
-
-        frame.grab_button(3, 0, True,
+        window.grab_button(3, 0, True,
             Xlib.X.ButtonMotionMask | Xlib.X.ButtonReleaseMask | Xlib.X.ButtonPressMask,
             Xlib.X.GrabModeAsync,
             Xlib.X.GrabModeAsync,
@@ -162,33 +143,35 @@ class BeringWM:
         Capture all the windows of all the screens
         """
         
+        print("Capturing all windows")
+
         if len(self.windows):
             print("There are captive windows already!")
             return
         
         for screen_id in self.screens:
             screen = self.display.screen(screen_id)
+            print(" Screen", screen_id)
             for window in screen.root.query_tree().children:
                 self.capture_window(screen, window)
 
-    def release_window(self, screen, frame):
+    def release_window(self, screen, window):
         """
         Remove the frame around a captured window
         """
 
-        window = self.windows[frame.id]
+        print('  Releasing window {0}/{1}... '.format(window.owner, window.id), end="")
 
-        print('Releasing window {0}/{1}... '.format(window.owner, window.id), end="")
+        a = window.get_attributes()
 
-        g = frame.get_geometry()
-        window.reparent(screen.root, g.x, g.y)
+        if a.override_redirect:
+            print("(override_redirect) ", end="")
 
-        # TODO: Remove from saveset?
+        if a.map_state != Xlib.X.IsViewable:
+            print("Not viewable")
+            return
 
-        frame.unmap()
-        frame.destroy()
-
-        del self.windows[frame.id]
+        window.configure(border_width=0)
 
         print("Released")
     
@@ -196,16 +179,13 @@ class BeringWM:
         """
         Release all the windows we have captured
         """
+        
         print("Releasing all windows...")
         for screen_id in self.screens:
             screen = self.display.screen(screen_id)
             print(" Screen", screen_id)
-            for frame in screen.root.query_tree().children:
-                print("  Release window from frame {0}? ".format(frame.id), end="")
-                if frame.id in self.windows:
-                    self.release_window(screen, frame)
-                else:
-                    print("not a frame")
+            for window in screen.root.query_tree().children:
+                self.release_window(screen, window)
 
     def main_loop(self):
         '''
@@ -247,11 +227,14 @@ class BeringWM:
                 raise
             traceback.print_exc()
         
-    def handle_create_notify(self, event):
-        pass
+    def handle_map_request(self, event):
+        event.window.map()
+        screen = self.display.screen(0) # TODO This will always map new windows on the left monitor... not good!
+        self.capture_window(screen, event.window)
 
-    def handle_destroy_notify(self, event):
-        pass
+    # TODO: Why?
+    def handle_mapping_notify(self, event):
+        self.display.refresh_keyboard_mapping(event)
 
     def handle_configure_request(self, event):
         window = event.window
@@ -269,36 +252,6 @@ class BeringWM:
         if event.value_mask & Xlib.X.CWStackMode:
             args['stack_mode'] = event.stack_mode
         window.configure(**args)
-
-    def handle_configure_notify(self, event):
-        pass
-
-    def handle_map_request(self, event):
-        event.window.map()
-        screen = self.display.screen(0) # TODO This will always map new windows on the left monitor... not good!
-        self.capture_window(screen, event.window)
-
-    def handle_map_notify(self, event):
-        pass
-
-    # TODO: Why?
-    def handle_mapping_notify(self, event):
-        self.display.refresh_keyboard_mapping(event)
-
-    def handle_unmap_notify(self, event):
-        window = event.window
-        print('Unmapping window {0}/{1}... '.format(window.owner, window.id), end="")
-        
-        if window not in self.windows.values():
-            print("Not Framed")
-            return
-
-        screen = self.display.screen(0) # TODO This won't work if there are more than one monitor... not good!
-        frame = event.event
-        self.release_window(screen, frame)
-
-    def handle_reparent_notify(self, event):
-        pass
 
     def handle_client_message(self, event):
         pass
