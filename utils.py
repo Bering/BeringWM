@@ -44,3 +44,12 @@ def system(command):
         except:
             pass
         sys.exit(1)
+
+"""
+Another way I found in whimsy (untested)
+"""
+def system2(command):
+    if not os.fork():
+        os.setsid()
+        subprocess.Popen(['/bin/sh', '-c', command], close_fds=True)
+        os._exit(0)
