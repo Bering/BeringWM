@@ -41,6 +41,7 @@ class BeringWM:
         self.event_dispatch_table = {
             Xlib.X.MapRequest: self.handle_map_request,
             Xlib.X.MappingNotify: self.handle_mapping_notify,
+            Xlib.X.UnmapNotify: self.handle_unmap_notify,
             Xlib.X.ConfigureRequest: self.handle_configure_request,
             Xlib.X.ClientMessage: self.handle_client_message,
 
@@ -235,6 +236,9 @@ class BeringWM:
     # TODO: Why?
     def handle_mapping_notify(self, event):
         self.display.refresh_keyboard_mapping(event)
+
+    def handle_unmap_notify(self, event):
+        pass
 
     def handle_configure_request(self, event):
         window = event.window
